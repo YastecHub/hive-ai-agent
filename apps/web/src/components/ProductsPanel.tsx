@@ -2,11 +2,14 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { PackageIcon, Tag01Icon } from "@hugeicons/core-free-icons";
 import type { Product } from "../api";
 
-function stockTone(stock: number) {
-  if (stock <= 0) return { text: "Out of stock", cls: "text-rose-400 bg-rose-500/10" };
-  if (stock <= 5) return { text: `${stock} left`, cls: "text-honey bg-honey/10" };
-  return { text: `${stock} in stock`, cls: "text-mint bg-mint/10" };
+/** Tone by what can actually be sold now (on-hand minus units held for unpaid orders). */
+function stockTone(available: number) {
+  if (available <= 0) return { text: "Out of stock", cls: "text-rose-400 bg-rose-500/10" };
+  if (available <= 5) return { text: `${available} left`, cls: "text-honey bg-honey/10" };
+  return { text: `${available} in stock`, cls: "text-mint bg-mint/10" };
 }
+
+const variantLabel = (p: Product) => [p.color, p.size ? `Size ${p.size}` : null].filter(Boolean).join(" · ");
 
 export function ProductsPanel({ products }: { products: Product[] }) {
   return (
@@ -26,7 +29,8 @@ export function ProductsPanel({ products }: { products: Product[] }) {
       ) : (
         <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((p) => {
-            const tone = stockTone(p.stock);
+            const tone = stockTone(p.available);
+            const variant = variantLabel(p);
             return (
               <div
                 key={p.id}
@@ -41,7 +45,13 @@ export function ProductsPanel({ products }: { products: Product[] }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-white">{p.name}</div>
+                  {variant && <div className="truncate text-xs text-slate-400">{variant}</div>}
                   <div className="text-sm font-semibold text-honey">{p.price}</div>
+                  {p.reserved > 0 && (
+                    <div className="text-[11px] text-sky-300">
+                      {p.stock} on hand · {p.reserved} reserved
+                    </div>
+                  )}
                 </div>
                 <span className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-medium ${tone.cls}`}>
                   {tone.text}

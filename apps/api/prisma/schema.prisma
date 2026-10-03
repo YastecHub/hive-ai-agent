@@ -35,6 +35,9 @@ model Merchant {
   orders        Order[]
   conversations Conversation[]
   supportTickets SupportTicket[]
+  quotes        Quote[]
+  activities    Activity[]
+  stockAdjustments StockAdjustment[]
 
   @@index([whatsappPhone])
 }
@@ -47,7 +50,15 @@ model Product {
   name        String
   description String?
   priceKobo   Int // price in minor units (kobo). 1 NGN = 100 kobo.
+  // On-hand units. Sellable now = stock - reserved.
   stock       Int      @default(0)
+  // Units held by unpaid voice orders. Released on expiry/cancel; on verified
+  // payment both stock and reserved drop by the order quantity.
+  reserved    Int      @default(0)
+  // Optional variant attributes. Each sellable variant is its own row, so
+  // "Ankara Classic Gown" in Black/12 and Black/14 are two products sharing a name.
+  color       String?
+  size        String?
   imageUrl    String?
   sku         String?
   active      Boolean  @default(true)
@@ -81,9 +92,24 @@ model Customer {
 
 // ───────────────────────────── Order ────────────────────────────────
 enum OrderStatus {
+  RESERVED // voice order confirmed by customer; stock reserved, awaiting verified payment
   CONFIRMED // placed by customer, stock decremented, awaiting fulfillment
   FULFILLED // delivered / completed by merchant
   CANCELLED // cancelled by merchant or customer, stock restored
+  EXPIRED // reservation lapsed before payment; reserved stock released
+}
+
+enum PaymentStatus {
+  NOT_REQUIRED // WhatsApp orders - payment handled off-platform
+  UNPAID // awaiting payment (no checkout started)
+  PENDING // checkout initialised with the payment provider
+  PAID // verified with the provider; stock finalised
+  NEEDS_REVIEW // verified payment arrived for an order that can no longer be fulfilled
+}
+
+enum Fulfilment {
+  PICKUP
+  DELIVERY
 }
 
 model Order {
@@ -95,10 +121,23 @@ model Order {
   customer   Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
   status     OrderStatus @default(CONFIRMED)
   totalKobo  Int         @default(0)
+  channel    String      @default("whatsapp") // whatsapp | voice
+  fulfilment Fulfilment  @default(PICKUP)
+  // The quote this order was confirmed from. Unique => one order per quote.
+  quoteId    String?     @unique
+  quote      Quote?      @relation(fields: [quoteId], references: [id], onDelete: SetNull)
+  reservationExpiresAt DateTime?
+  paymentStatus    PaymentStatus @default(NOT_REQUIRED)
+  paymentReference String?       @unique // our reference sent to Paystack
+  checkoutUrl      String?
+  paidAt           DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  items   OrderItem[]
+  items      OrderItem[]
+  activities Activity[]
+
+  @@index([status, reservationExpiresAt])
 
   @@index([merchantId])
   @@index([customerId])
@@ -181,4 +220,75 @@ model Message {
   createdAt      DateTime     @default(now())
 
   @@index([conversationId])
+}
+
+// ──────────────────── Quotes (voice ordering) ───────────────────────
+// A server-priced offer the voice agent reads back before the customer confirms.
+// Confirmation must name the quote id AND its current version, so the order is
+// always for exactly what was read aloud.
+enum QuoteStatus {
+  OPEN
+  CONFIRMED
+  EXPIRED
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  merchantId    String
+  merchant      Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  sessionId     String? // opaque voice session/conversation id; must match on confirm when set
+  customerPhone String? // as stated by the caller - NOT verified
+  customerName  String?
+  productId     String
+  nameSnapshot  String
+  unitKobo      Int
+  quantity      Int
+  totalKobo     Int
+  fulfilment    Fulfilment  @default(PICKUP)
+  version       Int         @default(1)
+  status        QuoteStatus @default(OPEN)
+  expiresAt     DateTime
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  order Order?
+
+  @@index([merchantId])
+}
+
+// ──────────────────── Activity log ──────────────────────────────────
+// Append-only business events shown in the merchant console.
+model Activity {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  type       String // e.g. quote.created, order.reserved, payment.verified, reservation.expired
+  message    String
+  data       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+}
+
+// ──────────────────── Merchant stock adjustments ────────────────────
+// Merchant voice writes are two-step: propose, then explicitly confirm.
+enum AdjustmentStatus {
+  PROPOSED
+  APPLIED
+  REJECTED
+}
+
+model StockAdjustment {
+  id         String           @id @default(cuid())
+  merchantId String
+  merchant   Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  productId  String
+  delta      Int
+  status     AdjustmentStatus @default(PROPOSED)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([merchantId])
 }

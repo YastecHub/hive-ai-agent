@@ -112,6 +112,10 @@ Groq LLMs drive an autonomous function-calling loop equipped with store manageme
 
 When a merchant sends an image, a vision model drafts the product listing automatically.
 
+### Voice Ordering (BimpeAI)
+
+Customers can also order by phone or web voice through a BimpeAI agent that calls Hive's tools. Hive prices every quote, reserves stock atomically when the caller confirms, and only a payment verified with Paystack finalizes the order. Setup, security rules and the demo script are in [docs/VOICE-COMMERCE.md](docs/VOICE-COMMERCE.md).
+
 ---
 
 ## Quickstart (Local Development)
@@ -141,6 +145,8 @@ pnpm dev:all                  # API → :4000 · Dashboard → :5173 · Simulato
 | `DATABASE_URL` | Yes | PostgreSQL connection string (local or [Neon](https://neon.tech)). |
 | `GROQ_API_KEY` | Yes | Groq API key for LLM inference ([console.groq.com](https://console.groq.com/keys)). |
 | `TWILIO_*` / `WHATSAPP_*` | Optional | WhatsApp gateway credentials. When omitted, mock logging is used. |
+| `VOICE_TOOL_KEY` / `VOICE_STORE_PHONE` | Optional | Enables the BimpeAI voice-ordering tools. See [docs/VOICE-COMMERCE.md](docs/VOICE-COMMERCE.md). |
+| `PAYSTACK_SECRET_KEY` | Optional | Paystack (test) checkout for voice orders. Without it, voice orders stay reserved, then expire. |
 
 ---
 

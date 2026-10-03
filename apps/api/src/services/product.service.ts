@@ -50,6 +50,10 @@ export interface UpdateProductInput {
 
 export async function updateProduct(productId: string, input: UpdateProductInput) {
   const { priceNaira, ...rest } = input;
+  if (rest.stock !== undefined) {
+    const current = await prisma.product.findUnique({ where: { id: productId } });
+    if (current && rest.stock < current.reserved) rest.stock = current.reserved;
+  }
   return prisma.product.update({
     where: { id: productId },
     data: {
@@ -59,11 +63,11 @@ export async function updateProduct(productId: string, input: UpdateProductInput
   });
 }
 
-/** Add (positive) or remove (negative) units from stock, clamped at 0. */
+/** Add (positive) or remove (negative) units from stock, never below units reserved for unpaid orders. */
 export async function adjustStock(productId: string, delta: number) {
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) throw new Error("Product not found");
-  const stock = Math.max(0, product.stock + delta);
+  const stock = Math.max(product.reserved, product.stock + delta);
   return prisma.product.update({ where: { id: productId }, data: { stock } });
 }
 

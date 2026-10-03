@@ -47,3 +47,6 @@ const globalForPrisma = globalThis as unknown as { prisma?: ExtendedPrisma };
 export const prisma = globalForPrisma.prisma ?? createClient();
 
 if (!isProd) globalForPrisma.prisma = prisma;
+
+/** The client handed to `prisma.$transaction(async (tx) => ...)` callbacks. */
+export type Tx = Omit<ExtendedPrisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;

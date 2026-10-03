@@ -64,9 +64,11 @@ export function topCustomers(orders: Order[], limit = 5): TopCustomer[] {
 }
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
+  RESERVED: { label: "Reserved", color: "#38bdf8" },
   CONFIRMED: { label: "Confirmed", color: "#f5c518" },
   FULFILLED: { label: "Fulfilled", color: "#39d98a" },
   CANCELLED: { label: "Cancelled", color: "#f43f5e" },
+  EXPIRED: { label: "Expired", color: "#64748b" },
 };
 
 /** Order counts grouped by status, ready for the donut. */

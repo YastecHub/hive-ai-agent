@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ShoppingCart01Icon, InvoiceIcon, ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ShoppingCart01Icon, InvoiceIcon, ArrowLeft01Icon, ArrowRight01Icon, Mic01Icon } from "@hugeicons/core-free-icons";
 import type { Order } from "../api";
 import { StatusBadge } from "./StatusBadge";
 
@@ -14,6 +14,42 @@ function timeAgo(iso: string): string {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+/** Small "Voice" chip so phone/web-voice orders stand out from WhatsApp ones. */
+function ChannelTag({ channel }: { channel: Order["channel"] }) {
+  if (channel !== "voice") return null;
+  return (
+    <span className="ml-2 inline-flex items-center gap-1 rounded-md bg-violet-400/10 px-1.5 py-0.5 align-middle font-sans text-[10px] font-medium text-violet-300">
+      <HugeiconsIcon icon={Mic01Icon} size={11} strokeWidth={2} />
+      Voice
+    </span>
+  );
+}
+
+/** Payment state under the status badge. Silent for WhatsApp orders (paid off-platform). */
+function PaymentNote({ order }: { order: Order }) {
+  const note: Partial<Record<Order["paymentStatus"], { text: string; cls: string }>> = {
+    UNPAID: { text: "Awaiting payment", cls: "text-slate-400" },
+    PENDING: { text: "Checkout opened", cls: "text-sky-300" },
+    PAID: { text: "Paid (verified)", cls: "text-mint" },
+    NEEDS_REVIEW: { text: "Paid after expiry - review", cls: "text-rose-400" },
+  };
+  const n = note[order.paymentStatus];
+  if (!n) return null;
+  return (
+    <div className={`mt-1 text-[11px] ${n.cls}`}>
+      {n.text}
+      {order.checkoutUrl && (
+        <>
+          {" · "}
+          <a href={order.checkoutUrl} target="_blank" rel="noreferrer" className="underline decoration-dotted hover:text-honey">
+            checkout link
+          </a>
+        </>
+      )}
+    </div>
+  );
 }
 
 export function OrdersTable({ orders }: { orders: Order[] }) {
@@ -54,7 +90,10 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
               <tbody>
                 {pageOrders.map((o) => (
                   <tr key={o.reference} className="border-t border-ink-600/60 animate-fadeIn hover:bg-ink-600/40">
-                    <td className="px-5 py-3 font-mono text-xs font-medium text-honey">{o.reference}</td>
+                    <td className="px-5 py-3 font-mono text-xs font-medium text-honey">
+                      {o.reference}
+                      <ChannelTag channel={o.channel} />
+                    </td>
                     <td className="px-5 py-3 text-slate-300">{o.customer ?? "-"}</td>
                     <td className="px-5 py-3 text-slate-400">
                       {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}
@@ -62,6 +101,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                     <td className="px-5 py-3 font-semibold text-white">{o.total}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={o.status} />
+                      <PaymentNote order={o} />
                     </td>
                     <td className="px-5 py-3 text-right text-xs text-slate-500">{timeAgo(o.createdAt)}</td>
                   </tr>
@@ -75,7 +115,10 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
             {pageOrders.map((o) => (
               <div key={o.reference} className="animate-fadeIn px-5 py-4">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-mono text-xs font-medium text-honey">{o.reference}</span>
+                  <span className="truncate font-mono text-xs font-medium text-honey">
+                    {o.reference}
+                    <ChannelTag channel={o.channel} />
+                  </span>
                   <span className="shrink-0">
                     <StatusBadge status={o.status} />
                   </span>
@@ -87,6 +130,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                 <div className="mt-1 text-xs text-slate-500">
                   {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")} · {timeAgo(o.createdAt)}
                 </div>
+                <PaymentNote order={o} />
               </div>
             ))}
           </div>
@@ -140,7 +184,7 @@ function EmptyOrders() {
       <HugeiconsIcon icon={InvoiceIcon} size={32} className="text-slate-600" strokeWidth={1.6} />
       <p className="mt-3 text-sm font-medium text-slate-400">No orders yet</p>
       <p className="mt-1 max-w-xs text-xs text-slate-500">
-        When a customer orders over WhatsApp and pays, it will appear here in real time.
+        When a customer orders over WhatsApp or by voice, it will appear here in real time.
       </p>
     </div>
   );

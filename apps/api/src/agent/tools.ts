@@ -40,6 +40,13 @@ import { getAnalytics } from "../services/analytics.service.js";
 import { findInactiveCustomers, getOrCreateCustomer, listCustomers } from "../services/customer.service.js";
 import { sendPromotion } from "../services/promotion.service.js";
 import { raiseTicket, listOpenTickets } from "../services/support.service.js";
+import { available } from "../services/inventory.service.js";
+
+/** "Ankara Classic Gown (Black, size 12)" - variants share a name, so include their attributes. */
+const displayName = (p: { name: string; color: string | null; size: string | null }) => {
+  const attrs = [p.color, p.size ? `size ${p.size}` : null].filter(Boolean).join(", ");
+  return attrs ? `${p.name} (${attrs})` : p.name;
+};
 
 /** Runtime context passed to every tool executor. */
 export interface ToolContext {
@@ -167,9 +174,9 @@ const tools: Tool[] = [
         ok: true,
         count: products.length,
         products: products.map((p) => ({
-          name: p.name,
+          name: displayName(p),
           price: formatNaira(p.priceKobo),
-          inStock: p.stock,
+          inStock: available(p),
           description: p.description ?? undefined,
         })),
       };
@@ -307,16 +314,21 @@ const tools: Tool[] = [
     declaration: {
       name: "check_order_status",
       description:
-        "Look up an order by reference (e.g. HIVE-7Q2K9F) and report its status (CONFIRMED, FULFILLED, or CANCELLED) and items.",
+        "Look up an order by reference (e.g. HIVE-7Q2K9F) and report its status (RESERVED, CONFIRMED, FULFILLED, CANCELLED or EXPIRED) and items.",
       parameters: {
         type: Type.OBJECT,
         properties: { reference: { type: Type.STRING } },
         required: ["reference"],
       },
     },
-    async execute(args) {
+    async execute(args, ctx) {
       const order = await getOrderByReference(args.reference);
-      if (!order) return { ok: false, error: "Order not found." };
+      // Scope: merchants see their store's orders; customers only their own.
+      const visible =
+        order &&
+        order.merchantId === ctx.merchantId &&
+        (ctx.party === "MERCHANT" || (ctx.customerId && order.customerId === ctx.customerId));
+      if (!order || !visible) return { ok: false, error: "Order not found." };
 
       return {
         ok: true,
@@ -370,7 +382,7 @@ const tools: Tool[] = [
         properties: {
           status: {
             type: Type.STRING,
-            description: "Optional filter: PENDING_PAYMENT, PAID, FULFILLED, CANCELLED.",
+            description: "Optional filter: RESERVED (voice order awaiting payment), CONFIRMED, FULFILLED, CANCELLED, EXPIRED.",
           },
           limit: { type: Type.NUMBER, description: "Max orders to return (default 20)." },
         },
@@ -428,7 +440,7 @@ const tools: Tool[] = [
       return {
         ok: true,
         count: products.length,
-        products: products.map((p) => ({ name: p.name, inStock: p.stock, price: formatNaira(p.priceKobo) })),
+        products: products.map((p) => ({ name: displayName(p), inStock: available(p), reserved: p.reserved, price: formatNaira(p.priceKobo) })),
       };
     },
   },

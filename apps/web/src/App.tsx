@@ -13,6 +13,7 @@ import { useDashboard } from "./hooks/useDashboard";
 import { OrdersTable } from "./components/OrdersTable";
 import { TopProducts } from "./components/TopProducts";
 import { ProductsPanel } from "./components/ProductsPanel";
+import { VoicePanel } from "./components/VoicePanel";
 import { Sidebar } from "./components/dashboard/Sidebar";
 import { Topbar } from "./components/dashboard/Topbar";
 import { KpiCard } from "./components/dashboard/KpiCard";
@@ -34,7 +35,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
       .catch((e) => setBootError(e instanceof Error ? e.message : "Cannot reach the Hive API"));
   }, []);
 
-  const { overview, products, orders, loading, error, lastUpdated, refresh } = useDashboard(selectedId);
+  const { overview, products, orders, activity, loading, error, lastUpdated, refresh } = useDashboard(selectedId);
   const a = overview?.analytics;
 
   const series = dailyRevenue(orders, 14);
@@ -139,6 +140,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
               <OrdersTable orders={orders} />
             </div>
             <div className="space-y-5">
+              <VoicePanel merchantId={selectedId} activity={activity} />
               <TopProducts items={a?.topProducts ?? []} />
               <TopCustomers id="customers" customers={customers} />
             </div>
@@ -150,7 +152,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
           </section>
 
           <footer className="pb-4 pt-2 text-center text-xs text-slate-600">
-            Hive Console · data updates live as orders are placed over WhatsApp.
+            Hive Console · data updates live as orders are placed over WhatsApp and voice.
           </footer>
         </main>
       </div>
