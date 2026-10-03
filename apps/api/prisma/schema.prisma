@@ -3,7 +3,8 @@
 // Everything flows from a WhatsApp conversation; the AI agent reads/writes these tables.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {

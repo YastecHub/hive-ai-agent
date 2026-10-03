@@ -10,6 +10,7 @@ coverage/
 .turbo/
 prisma/*.db
 prisma/*.db-journal
+.pgdata/
 .pnpm-store/
 
 # TypeScript incremental build info
