@@ -1,12 +1,6 @@
 import Groq from "groq-sdk";
 import { env, features } from "../config/env.js";
 
-/**
- * Thin provider wrapper around Groq (OpenAI-compatible chat completions with tool
- * calling). Isolated here so the rest of the codebase depends on a small
- * interface - swap this file to change LLM providers.
- */
-
 export type ChatMessage =
   | { role: "system"; content: string }
   | { role: "user"; content: string | Array<Record<string, unknown>> }
@@ -40,9 +34,12 @@ export interface GenerateResult {
   assistantMessage: ChatMessage;
 }
 
-let client: Groq | null = null;
-function getClient(): Groq {
-  if (!client) client = new Groq({ apiKey: env.GROQ_API_KEY });
+let client: any = null;
+function getClient(): any {
+  if (!client) {
+    const GroqConstructor = (Groq as any).Groq || (Groq as any).default || Groq;
+    client = new GroqConstructor({ apiKey: env.GROQ_API_KEY });
+  }
   return client;
 }
 
@@ -112,7 +109,7 @@ export async function generate(args: GenerateArgs): Promise<GenerateResult> {
       const choice = response.choices[0];
       const msg = choice?.message;
 
-      const toolCalls = (msg?.tool_calls ?? []).map((tc) => {
+      const toolCalls = (msg?.tool_calls ?? []).map((tc: any) => {
         let parsed: Record<string, unknown> = {};
         try {
           parsed = tc.function.arguments ? JSON.parse(tc.function.arguments) : {};
