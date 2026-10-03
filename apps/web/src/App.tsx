@@ -140,7 +140,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
           {/* Orders + right rail */}
           <section className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <div id="orders" className="lg:col-span-2">
-              <OrdersTable orders={orders} />
+              <OrdersTable orders={orders} merchantId={selectedId} onOrderUpdated={refresh} />
             </div>
             <div className="space-y-5">
               <VoicePanel

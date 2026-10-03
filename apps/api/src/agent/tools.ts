@@ -272,11 +272,34 @@ const tools: Tool[] = [
           status: order.status,
           total: formatNaira(order.totalKobo),
           items: order.items.map((i) => ({ name: i.nameSnapshot, quantity: i.quantity })),
-          message: "Order placed and confirmed. Confirm the reference and total to the customer and let them know the merchant has received it.",
+          payment: {
+            bank: "OPay",
+            accountNumber: "9068913009",
+            accountName: "Adunni Fashion",
+          },
+          message: `Order ${order.reference} placed and reserved for ${formatNaira(order.totalKobo)}. Tell the customer to transfer to OPay account 9068913009 (Adunni Fashion) and send proof of payment on WhatsApp to confirm delivery.`,
         };
       } catch (e: any) {
         return { ok: false, error: e?.message ?? "Could not create the order." };
       }
+    },
+  },
+
+  {
+    parties: ["CUSTOMER"],
+    declaration: {
+      name: "get_payment_details",
+      description: "Get the store's bank account transfer details (OPay account number, account name, payment instructions). Call this whenever the customer asks how to pay, requests an account number, or asks for payment details.",
+      parameters: { type: Type.OBJECT, properties: {} },
+    },
+    async execute(_args, _ctx) {
+      return {
+        ok: true,
+        bank: "OPay",
+        accountNumber: "9068913009",
+        accountName: "Adunni Fashion",
+        instructions: "Please make a bank transfer to OPay account 9068913009 (Adunni Fashion) and send your receipt screenshot here on WhatsApp so we can confirm and dispatch your order.",
+      };
     },
   },
 

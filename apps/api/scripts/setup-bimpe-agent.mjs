@@ -148,6 +148,12 @@ const CUSTOMER_TOOLS = [
     http_method: "GET",
     url_template: "/customer/store",
   },
+  {
+    name: "get_payment_info",
+    description: "Store bank transfer details: OPay account number (9068913009), account name (Adunni Fashion), and instructions.",
+    http_method: "GET",
+    url_template: "/customer/payment-info",
+  },
 ];
 
 const MERCHANT_TOOLS = [

@@ -63,10 +63,14 @@ export function Topbar({
 
           <button
             onClick={onOpenVoiceSimulator}
-            className="flex items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 transition-all hover:bg-violet-500/20 shadow-sm"
+            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-honey to-amber-300 px-3.5 py-2 text-xs font-bold text-ink-900 shadow-lg shadow-honey/20 transition-all hover:scale-105 active:scale-95"
+            title="Launch Interactive Speech-to-Speech Voice Call"
           >
-            <span>🎙️</span>
-            <span>Voice Simulator</span>
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+            </span>
+            <span>📞 Call Hive Voice AI</span>
           </button>
 
           <button

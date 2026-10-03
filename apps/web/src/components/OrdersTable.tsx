@@ -27,32 +27,94 @@ function ChannelTag({ channel }: { channel: Order["channel"] }) {
   );
 }
 
+import { api } from "../api";
+
 /** Payment state under the status badge. Silent for WhatsApp orders (paid off-platform). */
-function PaymentNote({ order }: { order: Order }) {
+function PaymentNote({
+  order,
+  merchantId,
+  onOrderUpdated,
+}: {
+  order: Order;
+  merchantId?: string | null;
+  onOrderUpdated?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const copy = () => {
+    navigator.clipboard.writeText("9068913009");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const confirmTransfer = async () => {
+    if (!merchantId || verifying) return;
+    setVerifying(true);
+    try {
+      await api.simulatePayment(merchantId, order.reference);
+      onOrderUpdated?.();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   const note: Partial<Record<Order["paymentStatus"], { text: string; cls: string }>> = {
     UNPAID: { text: "Awaiting transfer · OPay: 9068913009", cls: "text-amber-300 font-mono font-medium" },
     PENDING: { text: "Checkout opened", cls: "text-sky-300" },
-    PAID: { text: "Paid (verified)", cls: "text-mint" },
+    PAID: { text: "Paid (verified via OPay)", cls: "text-mint font-semibold" },
     NEEDS_REVIEW: { text: "Paid after expiry - review", cls: "text-rose-400" },
   };
   const n = note[order.paymentStatus];
   if (!n) return null;
   return (
     <div className={`mt-1 text-[11px] ${n.cls}`}>
-      {n.text}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span>{n.text}</span>
+        {order.paymentStatus === "UNPAID" && (
+          <>
+            <button
+              onClick={copy}
+              className="rounded bg-honey/20 px-1.5 py-0.5 text-[10px] font-bold text-honey hover:bg-honey hover:text-ink-900 transition-colors"
+              title="Copy OPay account number"
+            >
+              {copied ? "✓ Copied" : "Copy"}
+            </button>
+            {merchantId && (
+              <button
+                onClick={confirmTransfer}
+                disabled={verifying}
+                className="rounded bg-mint/20 px-1.5 py-0.5 text-[10px] font-bold text-mint hover:bg-mint hover:text-ink-900 transition-colors disabled:opacity-50"
+                title="Mark this transfer received & confirmed"
+              >
+                {verifying ? "Verifying..." : "✓ Confirm Payment"}
+              </button>
+            )}
+          </>
+        )}
+      </div>
       {order.checkoutUrl && (
-        <>
-          {" · "}
+        <div className="mt-0.5">
           <a href={order.checkoutUrl} target="_blank" rel="noreferrer" className="underline decoration-dotted hover:text-honey">
             checkout link
           </a>
-        </>
+        </div>
       )}
     </div>
   );
 }
 
-export function OrdersTable({ orders }: { orders: Order[] }) {
+export function OrdersTable({
+  orders,
+  merchantId,
+  onOrderUpdated,
+}: {
+  orders: Order[];
+  merchantId?: string | null;
+  onOrderUpdated?: () => void;
+}) {
   const [page, setPage] = useState(0);
 
   const totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
@@ -101,7 +163,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                     <td className="px-5 py-3 font-semibold text-white">{o.total}</td>
                     <td className="px-5 py-3">
                       <StatusBadge status={o.status} />
-                      <PaymentNote order={o} />
+                      <PaymentNote order={o} merchantId={merchantId} onOrderUpdated={onOrderUpdated} />
                     </td>
                     <td className="px-5 py-3 text-right text-xs text-slate-500">{timeAgo(o.createdAt)}</td>
                   </tr>
@@ -130,7 +192,7 @@ export function OrdersTable({ orders }: { orders: Order[] }) {
                 <div className="mt-1 text-xs text-slate-500">
                   {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")} · {timeAgo(o.createdAt)}
                 </div>
-                <PaymentNote order={o} />
+                <PaymentNote order={o} merchantId={merchantId} onOrderUpdated={onOrderUpdated} />
               </div>
             ))}
           </div>

@@ -212,6 +212,89 @@ dashboardRouter.post("/merchants/:id/simulate-voice-order", async (req, res, nex
       quantity,
       customer: customer.name,
       channel: channel === "voice_note" ? "WhatsApp Voice Note (BimpeAI Transcribed)" : "Live Telephony Voice Call",
+      bank: "OPay",
+      accountNumber: "9068913009",
+      accountName: "Adunni Fashion",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+dashboardRouter.post("/merchants/:id/simulate-payment", async (req, res, next) => {
+  try {
+    const merchantId = req.params.id;
+    const { orderReference } = req.body;
+    if (!orderReference) {
+      return res.status(400).json({ error: "orderReference is required" });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: { merchantId, reference: orderReference },
+      include: { items: true },
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const ord = await tx.order.update({
+        where: { id: order.id },
+        data: {
+          status: "CONFIRMED",
+          paymentStatus: "PAID",
+          paidAt: new Date(),
+          reservationExpiresAt: null,
+        },
+      });
+
+      for (const item of order.items) {
+        if (item.productId) {
+          await tx.product.update({
+            where: { id: item.productId },
+            data: {
+              stock: { decrement: item.quantity },
+              reserved: { decrement: item.quantity },
+            },
+          });
+        }
+      }
+
+      await tx.activity.create({
+        data: {
+          merchantId,
+          orderId: order.id,
+          type: "payment.verified",
+          message: `Payment of ${formatNaira(order.totalKobo)} verified via OPay transfer (Account: 9068913009) for ${order.reference}`,
+        },
+      });
+
+      return ord;
+    });
+
+    res.json({
+      ok: true,
+      reference: updated.reference,
+      status: updated.status,
+      paymentStatus: updated.paymentStatus,
+      bank: "OPay",
+      accountNumber: "9068913009",
+      accountName: "Adunni Fashion",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+dashboardRouter.get("/merchants/:id/payment-info", async (_req, res, next) => {
+  try {
+    res.json({
+      ok: true,
+      bank: "OPay",
+      accountNumber: "9068913009",
+      accountName: "Adunni Fashion",
+      instructions: "Transfer to OPay 9068913009 (Adunni Fashion) and send proof of payment on WhatsApp to confirm delivery.",
     });
   } catch (err) {
     next(err);

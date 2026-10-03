@@ -127,6 +127,20 @@ customer.get(
 );
 
 customer.get(
+  "/customer/payment-info",
+  tool(async (_req, _res) => {
+    return {
+      ok: true,
+      bank: "OPay",
+      account_number: "9068913009",
+      account_name: "Adunni Fashion",
+      instructions: "Transfer to OPay 9068913009 (Adunni Fashion) and send proof of payment on WhatsApp to confirm delivery.",
+      say: "Please transfer to our OPay account: 9068913009, name Adunni Fashion. Send your receipt on WhatsApp to confirm delivery.",
+    };
+  }),
+);
+
+customer.get(
   "/customer/products",
   tool(async (req, res) => {
     // Optional filters may arrive empty or as an unfilled "{{color}}" template placeholder.

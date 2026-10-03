@@ -138,6 +138,15 @@ export const api = {
       `/merchants/${merchantId}/simulate-voice-order`,
       { channel }
     ),
+  simulatePayment: (merchantId: string, orderReference: string) =>
+    post<{ ok: boolean; reference: string; status: string; paymentStatus: string; bank: string; accountNumber: string; accountName: string }>(
+      `/merchants/${merchantId}/simulate-payment`,
+      { orderReference }
+    ),
+  paymentInfo: (merchantId: string) =>
+    get<{ ok: boolean; bank: string; accountNumber: string; accountName: string; instructions: string }>(
+      `/merchants/${merchantId}/payment-info`
+    ),
   orders: (id: string) => get<Order[]>(`/merchants/${id}/orders`),
   activity: (id: string) => get<ActivityEvent[]>(`/merchants/${id}/activity`),
   integrations: () => get<Integrations>("/integrations"),
