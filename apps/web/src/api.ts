@@ -35,12 +35,21 @@ export interface Product {
   name: string;
   price: string;
   priceKobo: number;
+  /** On-hand units. */
   stock: number;
+  /** Units held by unpaid voice orders. */
+  reserved: number;
+  /** stock - reserved: what can be sold right now. */
+  available: number;
+  color: string | null;
+  size: string | null;
   active: boolean;
   imageUrl: string | null;
 }
 
-export type OrderStatus = "CONFIRMED" | "FULFILLED" | "CANCELLED";
+export type OrderStatus = "RESERVED" | "CONFIRMED" | "FULFILLED" | "CANCELLED" | "EXPIRED";
+
+export type PaymentStatus = "NOT_REQUIRED" | "UNPAID" | "PENDING" | "PAID" | "NEEDS_REVIEW";
 
 export interface Order {
   reference: string;
@@ -49,7 +58,36 @@ export interface Order {
   totalKobo: number;
   customer: string | null;
   items: { name: string; quantity: number }[];
+  channel: "whatsapp" | "voice";
+  fulfilment: "PICKUP" | "DELIVERY";
+  paymentStatus: PaymentStatus;
+  /** Paystack checkout link while the order is reserved and awaiting payment. */
+  checkoutUrl: string | null;
+  reservationExpiresAt: string | null;
   createdAt: string;
+}
+
+export interface ActivityEvent {
+  id: string;
+  type: string;
+  message: string;
+  orderReference: string | null;
+  createdAt: string;
+}
+
+/** What this server actually has configured - drives truthful "not set up" states. */
+export interface Integrations {
+  voice: {
+    toolsConfigured: boolean;
+    storeId: string | null;
+    storeName: string | null;
+    phoneNumber: string | null;
+    merchantToolsConfigured: boolean;
+    problem: string | null;
+  };
+  payments: { provider: "paystack" | null; mode: "test" | "live" | null };
+  whatsapp: { configured: boolean; provider: string };
+  reservationMinutes: number;
 }
 
 /**
@@ -71,6 +109,8 @@ export const api = {
   overview: (id: string) => get<Overview>(`/merchants/${id}/overview`),
   products: (id: string) => get<Product[]>(`/merchants/${id}/products`),
   orders: (id: string) => get<Order[]>(`/merchants/${id}/orders`),
+  activity: (id: string) => get<ActivityEvent[]>(`/merchants/${id}/activity`),
+  integrations: () => get<Integrations>("/integrations"),
 };
 
 /** Format kobo (minor units) as ₦ currency. */

@@ -21,10 +21,29 @@ interface StoreSeed {
   address: string;
   deliveryInfo: string;
   contactInfo: string;
-  products: { name: string; priceNaira: number; stock: number; description: string }[];
+  products: { name: string; priceNaira: number; stock: number; description: string; color?: string; size?: string }[];
 }
 
 const STORES: StoreSeed[] = [
+  // Voice-commerce demo fixture (issue #2). Fictional store, sample data.
+  // Variants are separate rows sharing a name, so "Ankara Classic Gown" alone is
+  // ambiguous and the voice agent must ask for colour/size.
+  {
+    phone: "2348100000010",
+    businessName: "Adunni Fashion",
+    ownerName: "Adunni",
+    category: "fashion",
+    about: "Fictional demo store - ready-to-wear Ankara for every occasion.",
+    businessHours: "Mon–Sat, 9am–6pm",
+    address: "14 Bode Thomas Street, Surulere, Lagos (fictional)",
+    deliveryInfo: "Store pickup only for voice orders.",
+    contactInfo: "Demo store - not a real business",
+    products: [
+      { name: "Ankara Classic Gown", color: "Black", size: "12", priceNaira: 18500, stock: 3, description: "Classic-cut Ankara gown." },
+      { name: "Ankara Classic Gown", color: "Red", size: "12", priceNaira: 18500, stock: 0, description: "Classic-cut Ankara gown." },
+      { name: "Gele", color: "Gold", size: "standard", priceNaira: 7500, stock: 5, description: "Gold headwrap." },
+    ],
+  },
   {
     phone: "2348100000001",
     businessName: "Bella's Fashion Hub",
@@ -85,11 +104,14 @@ const STORES: StoreSeed[] = [
 
 async function main() {
   // Reset (delete in FK-safe order).
+  await prisma.activity.deleteMany();
+  await prisma.stockAdjustment.deleteMany();
   await prisma.supportTicket.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.orderItem.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.quote.deleteMany();
   await prisma.product.deleteMany();
   await prisma.customer.deleteMany();
   await prisma.merchant.deleteMany();
@@ -111,6 +133,8 @@ async function main() {
         products: {
           create: s.products.map((p) => ({
             name: p.name,
+            color: p.color,
+            size: p.size,
             description: p.description,
             priceKobo: nairaToKobo(p.priceNaira),
             stock: p.stock,

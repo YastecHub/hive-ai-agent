@@ -3,6 +3,8 @@ import { prisma } from "../config/db.js";
 import { orderReference } from "../utils/ref.js";
 import { findProductByName } from "./product.service.js";
 import { notifyOrderPlaced, notifyOrderFulfilled } from "./notify.service.js";
+import { available, releaseStock, takeAvailableStock } from "./inventory.service.js";
+import { logActivity } from "./activity.service.js";
 
 export interface OrderLineInput {
   /** Product name (will be fuzzy-matched) OR a concrete productId. */
@@ -37,6 +39,7 @@ export async function createOrder(input: CreateOrderInput) {
 
     if (!product) throw new Error(`Product not found: "${line.product}"`);
     const quantity = Math.max(1, Math.floor(line.quantity || 1));
+    if (available(product) < quantity) throw new Error(`Only ${available(product)} of "${product.name}" available.`);
     resolved.push({
       productId: product.id,
       nameSnapshot: product.name,
@@ -48,12 +51,12 @@ export async function createOrder(input: CreateOrderInput) {
   const totalKobo = resolved.reduce((sum, r) => sum + r.priceKobo * r.quantity, 0);
 
   const order = await prisma.$transaction(async (tx) => {
-    // Decrement stock for each item
+    // Take stock for each item - only units not reserved for someone else.
+    // The conditional update makes concurrent orders for the last unit safe.
     for (const item of resolved) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { stock: { decrement: item.quantity } },
-      });
+      if (!(await takeAvailableStock(tx, item.productId, item.quantity))) {
+        throw new Error(`"${item.nameSnapshot}" just sold out - please choose a smaller quantity.`);
+      }
     }
 
     if (input.customerId) {
@@ -135,7 +138,7 @@ export async function fulfillOrder(reference: string, merchantId: string) {
 /** The customer's most recent order that can still be cancelled. */
 export async function latestCancellableOrder(customerId: string) {
   return prisma.order.findFirst({
-    where: { customerId, status: "CONFIRMED" },
+    where: { customerId, status: { in: ["CONFIRMED", "RESERVED"] } },
     orderBy: { createdAt: "desc" },
     include: { items: true, customer: true, merchant: true },
   });
@@ -163,22 +166,23 @@ export async function cancelOrder(opts: { reference?: string; customerId?: strin
   if (order.status === "CANCELLED") {
     return { ok: true as const, order };
   }
+  if (order.status === "EXPIRED") {
+    return { ok: false as const, error: `Order ${order.reference} already expired; its stock was released.` };
+  }
 
-  // Restore inventory stock and mark CANCELLED
+  // RESERVED orders give back their hold; CONFIRMED orders put stock back on the shelf.
+  // The conditional status flip makes a double cancel (or cancel vs. payment) apply once.
   const updated = await prisma.$transaction(async (tx) => {
-    for (const item of order.items) {
-      if (item.productId) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: { stock: { increment: item.quantity } },
-        });
+    const n = await tx.order.updateMany({ where: { id: order.id, status: order.status }, data: { status: "CANCELLED" } });
+    if (n.count === 1) {
+      for (const item of order.items) {
+        if (!item.productId) continue;
+        if (order.status === "RESERVED") await releaseStock(tx, item.productId, item.quantity);
+        else await tx.product.update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } });
       }
+      await logActivity({ merchantId: order.merchantId, orderId: order.id, type: "order.cancelled", message: `${order.reference} cancelled` }, tx);
     }
-    return tx.order.update({
-      where: { id: order.id },
-      data: { status: "CANCELLED" },
-      include: { items: true },
-    });
+    return tx.order.findUniqueOrThrow({ where: { id: order.id }, include: { items: true } });
   });
 
   return { ok: true as const, order: updated };

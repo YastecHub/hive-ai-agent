@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type Order, type Overview, type Product } from "../api";
+import { api, type ActivityEvent, type Order, type Overview, type Product } from "../api";
 
 export interface DashboardData {
   overview: Overview | null;
   products: Product[];
   orders: Order[];
+  activity: ActivityEvent[];
 }
 
 interface State extends DashboardData {
@@ -23,6 +24,7 @@ export function useDashboard(merchantId: string | null, intervalMs = 4000) {
     overview: null,
     products: [],
     orders: [],
+    activity: [],
     loading: true,
     error: null,
     lastUpdated: null,
@@ -35,12 +37,13 @@ export function useDashboard(merchantId: string | null, intervalMs = 4000) {
       if (!merchantId) return;
       if (!silent) setState((s) => ({ ...s, loading: true }));
       try {
-        const [overview, products, orders] = await Promise.all([
+        const [overview, products, orders, activity] = await Promise.all([
           api.overview(merchantId),
           api.products(merchantId),
           api.orders(merchantId),
+          api.activity(merchantId),
         ]);
-        setState({ overview, products, orders, loading: false, error: null, lastUpdated: new Date() });
+        setState({ overview, products, orders, activity, loading: false, error: null, lastUpdated: new Date() });
       } catch (e) {
         setState((s) => ({
           ...s,

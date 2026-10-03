@@ -10,3 +10,19 @@ export function orderReference(): string {
 export function normalizePhone(raw: string): string {
   return raw.replace(/[^\d]/g, "");
 }
+
+/**
+ * Normalize a spoken/typed Nigerian number to the same digits-only E.164 form
+ * WhatsApp gives us: "0803 123 4567" -> "2348031234567". Returns null if it
+ * doesn't look like a phone number.
+ */
+export function normalizeCallerPhone(raw: string): string | null {
+  let d = normalizePhone(raw);
+  if (d.length === 11 && d.startsWith("0")) d = `234${d.slice(1)}`;
+  return d.length >= 10 && d.length <= 15 ? d : null;
+}
+
+/** Unique payment reference for a provider checkout, e.g. HIVE-7Q2K9F-P3XA. */
+export function paymentReference(orderRef: string): string {
+  return `${orderRef}-${orderReference().slice(5, 9)}`;
+}

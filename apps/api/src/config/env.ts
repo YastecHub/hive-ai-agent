@@ -40,6 +40,27 @@ const schema = z.object({
 
   CLOUDINARY_URL: z.string().default(""),
 
+  // ── Voice commerce (BimpeAI calls these tools over HTTPS) ──
+  // Shared secret BimpeAI sends as the x-hive-tool-key header. Empty = voice tools disabled.
+  VOICE_TOOL_KEY: z.string().default(""),
+  // The one store the voice agent sells for. Store scope is server-controlled -
+  // never taken from the model. Set the merchant's WhatsApp phone (digits only).
+  VOICE_STORE_PHONE: z.string().default(""),
+  // Separate secret for the merchant voice agent (inventory writes). Empty = disabled.
+  VOICE_MERCHANT_TOOL_KEY: z.string().default(""),
+  // How long a quote stays confirmable, and how long confirmed stock stays reserved unpaid.
+  QUOTE_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+  RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(30),
+  // Shown in the console so staff know which number to call. Informational only.
+  VOICE_PHONE_NUMBER: z.string().default(""),
+
+  // ── Paystack (test mode for the demo) ──
+  PAYSTACK_SECRET_KEY: z.string().default(""),
+  // Paystack requires a checkout email. We use the email the caller gives; if they
+  // give none, this explicitly configured demo address (disclosed as test data).
+  // Empty = no checkout without a caller email. We never derive emails from phones.
+  PAYSTACK_DEMO_EMAIL: z.string().email().or(z.literal("")).default(""),
+
   // Keep-alive self-ping interval (ms) to stop the host (e.g. Render free tier)
   // from sleeping. Only runs in production against a real public URL.
   KEEPALIVE_INTERVAL_MS: z.coerce.number().default(60_000),
@@ -65,4 +86,13 @@ export const features = {
   ai: Boolean(env.GROQ_API_KEY),
   whatsapp: env.WHATSAPP_PROVIDER === "twilio" ? twilioReady : metaReady,
   whatsappProvider: env.WHATSAPP_PROVIDER,
+  voiceTools: Boolean(env.VOICE_TOOL_KEY && env.VOICE_STORE_PHONE),
+  merchantVoiceTools: Boolean(env.VOICE_MERCHANT_TOOL_KEY && env.VOICE_STORE_PHONE),
+  paystack: Boolean(env.PAYSTACK_SECRET_KEY),
+  /** "test" | "live" | null - derived from the key prefix, checked against every verified payment. */
+  paystackMode: env.PAYSTACK_SECRET_KEY.startsWith("sk_live_")
+    ? ("live" as const)
+    : env.PAYSTACK_SECRET_KEY
+      ? ("test" as const)
+      : null,
 };
