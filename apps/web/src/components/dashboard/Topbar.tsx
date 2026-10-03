@@ -10,9 +10,19 @@ interface Props {
   lastUpdated: Date | null;
   onRefresh: () => void;
   onOpenSimulator: () => void;
+  onOpenVoiceSimulator?: () => void;
 }
 
-export function Topbar({ merchants, selectedId, onSelect, businessName, lastUpdated, onRefresh, onOpenSimulator }: Props) {
+export function Topbar({
+  merchants,
+  selectedId,
+  onSelect,
+  businessName,
+  lastUpdated,
+  onRefresh,
+  onOpenSimulator,
+  onOpenVoiceSimulator,
+}: Props) {
   return (
     <header className="sticky top-0 z-20 border-b border-ink-500/60 bg-ink-900/70 backdrop-blur-xl">
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -50,6 +60,14 @@ export function Topbar({ merchants, selectedId, onSelect, businessName, lastUpda
               </span>
             )}
           </div>
+
+          <button
+            onClick={onOpenVoiceSimulator}
+            className="flex items-center gap-1.5 rounded-xl border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-300 transition-all hover:bg-violet-500/20 shadow-sm"
+          >
+            <span>🎙️</span>
+            <span>Voice Simulator</span>
+          </button>
 
           <button
             onClick={onRefresh}

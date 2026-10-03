@@ -14,6 +14,7 @@ import { OrdersTable } from "./components/OrdersTable";
 import { TopProducts } from "./components/TopProducts";
 import { ProductsPanel } from "./components/ProductsPanel";
 import { VoicePanel } from "./components/VoicePanel";
+import { VoiceSimulatorModal } from "./components/VoiceSimulatorModal";
 import { Sidebar } from "./components/dashboard/Sidebar";
 import { Topbar } from "./components/dashboard/Topbar";
 import { KpiCard } from "./components/dashboard/KpiCard";
@@ -24,6 +25,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [bootError, setBootError] = useState<string | null>(null);
+  const [voiceModalOpen, setVoiceModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     api
@@ -60,6 +62,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
           lastUpdated={lastUpdated}
           onRefresh={refresh}
           onOpenSimulator={onOpenSimulator}
+          onOpenVoiceSimulator={() => setVoiceModalOpen(true)}
         />
 
         <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
@@ -140,7 +143,11 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
               <OrdersTable orders={orders} />
             </div>
             <div className="space-y-5">
-              <VoicePanel merchantId={selectedId} activity={activity} />
+              <VoicePanel
+                merchantId={selectedId}
+                activity={activity}
+                onOpenVoiceSimulator={() => setVoiceModalOpen(true)}
+              />
               <TopProducts items={a?.topProducts ?? []} />
               <TopCustomers id="customers" customers={customers} />
             </div>
@@ -156,6 +163,13 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
           </footer>
         </main>
       </div>
+
+      <VoiceSimulatorModal
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+        merchantId={selectedId}
+        onOrderCreated={refresh}
+      />
     </div>
   );
 }

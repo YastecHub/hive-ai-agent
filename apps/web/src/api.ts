@@ -133,6 +133,11 @@ export const api = {
   products: (id: string) => get<Product[]>(`/merchants/${id}/products`),
   createProduct: (merchantId: string, payload: CreateProductPayload) =>
     post<Product>(`/merchants/${merchantId}/products`, payload),
+  simulateVoiceOrder: (merchantId: string, channel: "voice" | "voice_note" = "voice") =>
+    post<{ ok: boolean; reference: string; total: string; productName: string; quantity: number; customer: string; channel: string }>(
+      `/merchants/${merchantId}/simulate-voice-order`,
+      { channel }
+    ),
   orders: (id: string) => get<Order[]>(`/merchants/${id}/orders`),
   activity: (id: string) => get<ActivityEvent[]>(`/merchants/${id}/activity`),
   integrations: () => get<Integrations>("/integrations"),

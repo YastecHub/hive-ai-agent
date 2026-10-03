@@ -132,6 +132,92 @@ dashboardRouter.get("/merchants/:id/orders", async (req, res, next) => {
   }
 });
 
+dashboardRouter.post("/merchants/:id/simulate-voice-order", async (req, res, next) => {
+  try {
+    const merchantId = req.params.id;
+    const { channel = "voice", customerName = "Adewale Adeleke", customerPhone = "2348031234567" } = req.body;
+
+    let product = await prisma.product.findFirst({
+      where: { merchantId, active: true, stock: { gt: 0 } },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!product) {
+      product = await prisma.product.findFirst({
+        where: { active: true },
+        orderBy: { createdAt: "desc" },
+      });
+    }
+
+    if (!product) {
+      return res.status(404).json({ error: "No products available to quote" });
+    }
+
+    const quantity = 2;
+    const totalKobo = product.priceKobo * quantity;
+    const ref = `HIVE-V${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+    let customer = await prisma.customer.findFirst({
+      where: { merchantId, whatsappPhone: customerPhone },
+    });
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: { merchantId, name: customerName, whatsappPhone: customerPhone },
+      });
+    }
+
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const order = await prisma.order.create({
+      data: {
+        merchantId,
+        customerId: customer.id,
+        reference: ref,
+        status: "RESERVED",
+        channel: "voice",
+        totalKobo,
+        reservationExpiresAt: expiresAt,
+        paymentStatus: "UNPAID",
+        items: {
+          create: [
+            {
+              productId: product.id,
+              nameSnapshot: product.name + (product.color ? ` (${product.color}, Size ${product.size})` : ""),
+              priceKobo: product.priceKobo,
+              quantity,
+            },
+          ],
+        },
+      },
+      include: { items: true, customer: true },
+    });
+
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { reserved: { increment: quantity } },
+    });
+
+    await prisma.activity.create({
+      data: {
+        merchantId,
+        orderId: order.id,
+        type: "order.reserved",
+        message: `Order ${ref} reserved via ${channel === "voice_note" ? "WhatsApp Voice Note" : "Voice Call"} for 2x ${product.name} (${formatNaira(totalKobo)})`,
+      },
+    });
+
+    res.json({
+      ok: true,
+      reference: order.reference,
+      total: formatNaira(order.totalKobo),
+      productName: product.name,
+      quantity,
+      customer: customer.name,
+      channel: channel === "voice_note" ? "WhatsApp Voice Note (BimpeAI Transcribed)" : "Live Telephony Voice Call",
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 dashboardRouter.get("/merchants/:id/activity", async (req, res, next) => {
   try {
     const events = await listActivity(req.params.id, 30);

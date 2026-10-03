@@ -121,7 +121,7 @@ customer.get(
       address: m.address,
       hours: m.businessHours,
       fulfilment_options: ["store pickup"],
-      payment: features.paystack ? "Online card/transfer via a Paystack link" : "Online payment is not set up yet",
+      payment: "Bank transfer to OPay account 9068913009 (Adunni Fashion). Send proof of payment on WhatsApp to confirm delivery.",
     };
   }),
 );
@@ -182,8 +182,14 @@ customer.post(
     // Payment link: generate it, never claim it was delivered. We don't message
     // callers automatically - a phone call doesn't make a WhatsApp send permitted.
     // Calling confirm_order again (idempotent) retries a failed checkout start.
-    let payment: Record<string, unknown> = { status: order.paymentStatus, link_generated: false };
-    let say = `Order ${order.reference} is reserved for ${env.RESERVATION_TTL_MINUTES} minutes and is awaiting payment. Online payment isn't set up, so the store will contact you about paying.`;
+    let payment: Record<string, unknown> = {
+      status: order.paymentStatus,
+      bank: "OPay",
+      account_number: "9068913009",
+      account_name: "Adunni Fashion",
+      link_generated: false,
+    };
+    let say = `Order ${order.reference} is reserved for ${env.RESERVATION_TTL_MINUTES} minutes. Please transfer to our OPay account: 9068913009, name Adunni Fashion. Send your receipt on WhatsApp to confirm delivery.`;
     if (order.status === "RESERVED" && features.paystack) {
       try {
         const checkout = await startCheckout(order.id, b.customer_email);

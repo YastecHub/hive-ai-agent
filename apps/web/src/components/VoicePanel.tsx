@@ -31,7 +31,15 @@ function Row({ icon, label, value, tone }: { icon: any; label: string; value: st
  * Voice commerce status + live activity. Every state shown here comes from the
  * server's actual configuration - nothing is assumed live.
  */
-export function VoicePanel({ merchantId, activity }: { merchantId: string | null; activity: ActivityEvent[] }) {
+export function VoicePanel({
+  merchantId,
+  activity,
+  onOpenVoiceSimulator,
+}: {
+  merchantId: string | null;
+  activity: ActivityEvent[];
+  onOpenVoiceSimulator?: () => void;
+}) {
   const [cfg, setCfg] = useState<Integrations | null>(null);
   const [cfgError, setCfgError] = useState<string | null>(null);
 
@@ -55,9 +63,20 @@ export function VoicePanel({ merchantId, activity }: { merchantId: string | null
 
   return (
     <div className="rounded-2xl border border-ink-500/70 bg-ink-700/80 shadow-card backdrop-blur-sm">
-      <div className="flex items-center gap-2.5 border-b border-ink-500/70 px-5 py-4">
-        <HugeiconsIcon icon={Mic01Icon} size={18} className="text-violet-300" strokeWidth={2} />
-        <h2 className="text-sm font-semibold text-white">Voice ordering</h2>
+      <div className="flex items-center justify-between border-b border-ink-500/70 px-5 py-4">
+        <div className="flex items-center gap-2.5">
+          <HugeiconsIcon icon={Mic01Icon} size={18} className="text-violet-300" strokeWidth={2} />
+          <h2 className="text-sm font-semibold text-white">Voice ordering</h2>
+        </div>
+        {onOpenVoiceSimulator && (
+          <button
+            onClick={onOpenVoiceSimulator}
+            className="flex items-center gap-1.5 rounded-lg bg-honey/15 px-2.5 py-1 text-xs font-semibold text-honey transition-all hover:bg-honey/25"
+          >
+            <span>🎙️</span>
+            <span>Try Voice Demo</span>
+          </button>
+        )}
       </div>
 
       <div className="p-5">

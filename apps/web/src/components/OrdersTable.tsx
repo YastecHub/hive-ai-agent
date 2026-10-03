@@ -30,7 +30,7 @@ function ChannelTag({ channel }: { channel: Order["channel"] }) {
 /** Payment state under the status badge. Silent for WhatsApp orders (paid off-platform). */
 function PaymentNote({ order }: { order: Order }) {
   const note: Partial<Record<Order["paymentStatus"], { text: string; cls: string }>> = {
-    UNPAID: { text: "Awaiting payment", cls: "text-slate-400" },
+    UNPAID: { text: "Awaiting transfer · OPay: 9068913009", cls: "text-amber-300 font-mono font-medium" },
     PENDING: { text: "Checkout opened", cls: "text-sky-300" },
     PAID: { text: "Paid (verified)", cls: "text-mint" },
     NEEDS_REVIEW: { text: "Paid after expiry - review", cls: "text-rose-400" },
