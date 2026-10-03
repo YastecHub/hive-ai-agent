@@ -27,3 +27,4 @@ shot*.mjs
 # Generated demo voiceover audio (YarnGPT) - local only
 demo-voiceover/
 *.mp3
+.neon
