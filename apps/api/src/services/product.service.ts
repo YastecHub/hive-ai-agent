@@ -6,6 +6,8 @@ export interface CreateProductInput {
   priceNaira: number;
   stock?: number;
   description?: string;
+  color?: string;
+  size?: string;
   imageUrl?: string;
   sku?: string;
 }
@@ -18,6 +20,8 @@ export async function createProduct(merchantId: string, input: CreateProductInpu
       description: input.description,
       priceKobo: nairaToKobo(input.priceNaira),
       stock: input.stock ?? 0,
+      color: input.color,
+      size: input.size,
       imageUrl: input.imageUrl,
       sku: input.sku,
     },

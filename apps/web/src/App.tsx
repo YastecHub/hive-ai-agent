@@ -148,7 +148,7 @@ export default function App({ onOpenSimulator }: { onOpenSimulator: () => void }
 
           {/* Inventory */}
           <section id="inventory">
-            <ProductsPanel products={products} />
+            <ProductsPanel products={products} merchantId={selectedId} onProductAdded={refresh} />
           </section>
 
           <footer className="pb-4 pt-2 text-center text-xs text-slate-600">

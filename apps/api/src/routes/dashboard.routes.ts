@@ -60,6 +60,49 @@ dashboardRouter.get("/merchants/:id/products", async (req, res, next) => {
   }
 });
 
+dashboardRouter.post("/merchants/:id/products", async (req, res, next) => {
+  try {
+    const { name, priceNaira, stock, color, size, description, imageUrl, sku } = req.body;
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ error: "Product name is required" });
+    }
+    const price = Number(priceNaira);
+    if (isNaN(price) || price <= 0) {
+      return res.status(400).json({ error: "Valid price in Naira is required" });
+    }
+
+    const created = await prisma.product.create({
+      data: {
+        merchantId: req.params.id,
+        name: name.trim(),
+        priceKobo: Math.round(price * 100),
+        stock: Math.max(0, parseInt(String(stock ?? 0), 10) || 0),
+        color: color ? String(color).trim() : null,
+        size: size ? String(size).trim() : null,
+        description: description ? String(description).trim() : null,
+        imageUrl: imageUrl ? String(imageUrl).trim() : null,
+        sku: sku ? String(sku).trim() : null,
+      },
+    });
+
+    res.status(201).json({
+      id: created.id,
+      name: created.name,
+      price: formatNaira(created.priceKobo),
+      priceKobo: created.priceKobo,
+      stock: created.stock,
+      reserved: created.reserved,
+      available: available(created),
+      color: created.color,
+      size: created.size,
+      active: created.active,
+      imageUrl: created.imageUrl,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 dashboardRouter.get("/merchants/:id/orders", async (req, res, next) => {
   try {
     const orders = await prisma.order.findMany({

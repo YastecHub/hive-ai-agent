@@ -104,10 +104,35 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function post<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `${res.status} ${res.statusText}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+export interface CreateProductPayload {
+  name: string;
+  priceNaira: number;
+  stock?: number;
+  color?: string;
+  size?: string;
+  description?: string;
+  imageUrl?: string;
+}
+
 export const api = {
   merchants: () => get<Merchant[]>("/merchants"),
   overview: (id: string) => get<Overview>(`/merchants/${id}/overview`),
   products: (id: string) => get<Product[]>(`/merchants/${id}/products`),
+  createProduct: (merchantId: string, payload: CreateProductPayload) =>
+    post<Product>(`/merchants/${merchantId}/products`, payload),
   orders: (id: string) => get<Order[]>(`/merchants/${id}/orders`),
   activity: (id: string) => get<ActivityEvent[]>(`/merchants/${id}/activity`),
   integrations: () => get<Integrations>("/integrations"),
